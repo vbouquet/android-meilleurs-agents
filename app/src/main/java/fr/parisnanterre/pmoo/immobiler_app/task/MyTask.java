@@ -8,17 +8,20 @@ import android.location.Location;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
 import java.lang.ref.WeakReference;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.List;
 import java.util.Locale;
 
 import fr.parisnanterre.pmoo.immobiler_app.activity.MainActivity;
+import fr.parisnanterre.pmoo.immobiler_app.model.MeilleursAgentsLocID;
+import fr.parisnanterre.pmoo.immobiler_app.model.market.MeilleursAgentsMarketPrice;
 import fr.parisnanterre.pmoo.immobiler_app.util.ToolsPpmInJava;
 
 public class MyTask extends AsyncTask<Location, Void, Void> {
@@ -77,18 +80,15 @@ public class MyTask extends AsyncTask<Location, Void, Void> {
                 Log.d("meilleursAgentsURL", meilleursAgentsURL);
                 String meilleursAgentsLookup = ToolsPpmInJava.getJson(meilleursAgentsURL);
                 try {
-                    JSONObject jsonMeilleursAgentsLookup = new JSONObject(meilleursAgentsLookup);
-                    Log.d("json", jsonMeilleursAgentsLookup.toString());
-                    int placeType = jsonMeilleursAgentsLookup
-                            .getJSONObject("response")
-                            .getJSONArray("places")
-                            .getJSONObject(0)
-                            .getInt("type");
-                    int placeId = jsonMeilleursAgentsLookup
-                            .getJSONObject("response")
-                            .getJSONArray("places")
-                            .getJSONObject(0)
-                            .getInt("id");
+                    // Association des éléments json avec les classes et récupération des ID
+                    ObjectMapper objectMapper = new ObjectMapper();
+                    Reader reader = new StringReader(meilleursAgentsLookup);
+                    MeilleursAgentsLocID meilleursAgentsLocID = objectMapper.readValue(
+                            reader, MeilleursAgentsLocID.class);
+
+
+                    int placeType = meilleursAgentsLocID.getResponse().getPlaces().get(0).getType();
+                    int placeId = meilleursAgentsLocID.getResponse().getPlaces().get(0).getId();
 
                     // Récupération de l'URL pour le prix de l'immobilier sur la position
                     // (à cause du problème de redirection)
@@ -108,19 +108,17 @@ public class MyTask extends AsyncTask<Location, Void, Void> {
                     String meilleursAgentsPrices = ToolsPpmInJava.getJson(
                             meilleursAgentsPricesFinalURL + "?partial=1");
                     Log.d("raw", meilleursAgentsPrices);
-                    JSONObject meilleursAgentsPricesJson = new JSONObject(meilleursAgentsPrices);
-                    Log.d("json prices", meilleursAgentsPricesJson.toString(4));
-                    price = meilleursAgentsPricesJson
-                            .getJSONObject("market")
-                            .getJSONObject("prices")
-                            .getJSONObject("sell")
-                            .getJSONObject("apartment")
-                            .getInt("value");
+
+                    // Association des éléments json avec les classes et récupération du prix
+                    objectMapper = new ObjectMapper();
+                    reader = new StringReader(meilleursAgentsPrices);
+                    MeilleursAgentsMarketPrice meilleursAgentsMarketPrice = objectMapper.readValue(reader, MeilleursAgentsMarketPrice.class);
+
+                    price = meilleursAgentsMarketPrice.getMarket().getPrices().getSell().getApartment().getValue();
                     Log.i("final price", "PRICE = " + price);
 
-                } catch (JSONException e) {
+                } catch (MalformedURLException e) {
                     e.getStackTrace();
-                    Log.d("MeilleursAgents", "Meilleurs agents json load object error");
                 }
             } else {
                 Log.d("Geocoder", "Addresses null or empty");
