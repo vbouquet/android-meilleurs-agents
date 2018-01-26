@@ -3,6 +3,7 @@ package fr.parisnanterre.pmoo.immobiler_app.activity;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.location.Address;
 import android.location.Location;
@@ -20,6 +21,7 @@ import java.util.Locale;
 
 import fr.parisnanterre.pmoo.immobiler_app.R;
 import fr.parisnanterre.pmoo.immobiler_app.listener.MyLocationListener;
+import fr.parisnanterre.pmoo.immobiler_app.security.SecurityPMOB;
 import fr.parisnanterre.pmoo.immobiler_app.task.MyTask;
 
 public class MainActivity extends Activity {
@@ -30,6 +32,9 @@ public class MainActivity extends Activity {
     private TextView longitudeTextView;
     private TextView addressTextView;
     private TextView priceTextView;
+    private Button startButton;
+    private Button stopButton;
+    private Button getInfoButton;
     private ImageView mapImageView;
     private LocationManager locationManager;
     private LocationListener locationListener = new MyLocationListener(this);
@@ -39,44 +44,21 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Log.e(MainActivity.class.getCanonicalName(), "onCreate main activity");
 
         // Récupération des éléments de l'UI
-        Button startButton = findViewById(R.id.activity_main_button_start);
-        Button stopButton = findViewById(R.id.activity_main_button_stop);
-        Button getInfoButton = findViewById(R.id.activity_main_button_get_info);
+        startButton = findViewById(R.id.activity_main_button_start);
+        stopButton = findViewById(R.id.activity_main_button_stop);
+        getInfoButton = findViewById(R.id.activity_main_button_get_info);
         latitudeTextView = findViewById(R.id.activity_main_text_view_latitude);
         longitudeTextView = findViewById(R.id.activity_main_text_view_longitude);
         addressTextView = findViewById(R.id.activity_main_text_view_address_info);
         priceTextView = findViewById(R.id.activity_main_text_view_price_info);
         mapImageView = findViewById(R.id.activity_main_image_view_map);
 
+        SecurityPMOB.requestPermissions(this);
         // Mise à jour de la position par défaut
         updatePositionView(null);
-
-        startButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Toast.makeText(MainActivity.this, toast_start_gps, Toast.LENGTH_LONG).show();
-                startGps();
-            }
-        });
-
-        stopButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Toast.makeText(getApplicationContext(), toast_stop_gps, Toast.LENGTH_LONG).show();
-                stopGps();
-            }
-        });
-
-        getInfoButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Toast.makeText(getApplicationContext(), toast_get_info, Toast.LENGTH_LONG).show();
-                MyTask task = new MyTask(MainActivity.this);
-                task.execute(location);
-            }
-        });
     }
 
     @SuppressLint("MissingPermission")
@@ -131,5 +113,49 @@ public class MainActivity extends Activity {
 
     public void updatePrice(int price) {
         priceTextView.setText(String.format(Locale.FRANCE, "%d \u20ac", price));
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        Log.e(MainActivity.class.getCanonicalName(), "onRequestPermissionsResult");
+        switch (requestCode) {
+            case 1:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this, "request permissions accepted!", Toast.LENGTH_LONG).show();
+                    enableButtons();
+                } else {
+                    Toast.makeText(this, "request permissions refused!", Toast.LENGTH_LONG).show();
+                }
+                return;
+            default:
+                return;
+        }
+    }
+
+    private void enableButtons() {
+        startButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Toast.makeText(MainActivity.this, toast_start_gps, Toast.LENGTH_LONG).show();
+                startGps();
+            }
+        });
+
+        stopButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Toast.makeText(getApplicationContext(), toast_stop_gps, Toast.LENGTH_LONG).show();
+                stopGps();
+            }
+        });
+
+        getInfoButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Toast.makeText(getApplicationContext(), toast_get_info, Toast.LENGTH_LONG).show();
+                MyTask task = new MyTask(MainActivity.this);
+                task.execute(location);
+            }
+        });
     }
 }
